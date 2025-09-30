@@ -3,16 +3,19 @@
 
 #define SIZE 900   
 
+//use to chek operator
 int operatorCheck(char c) {
     return (c=='+' || c=='-' || c=='*' || c=='/');
 }
 
+//use for priority check of operator
 int precedence(char c) {
     if (c=='*' || c=='/') return 2;
     if (c=='+' || c=='-') return 1;
     return 0;
 }
 
+//use for evaluate the operation b/w two operand
 int calculateTheOperations(int x, int y, char c, int *err) {
     if (c=='+') return x+y;
     if (c=='-') return x-y;
@@ -26,14 +29,20 @@ int calculateTheOperations(int x, int y, char c, int *err) {
     return 0;
 }
 
+//use to check space
 int is_space(char c) {
     return (c == ' ');
 }
 
+//use to chek digit
 int is_digit(char c) {
     return (c >= '0' && c <= '9');
 }
 
+//it evaluates the expression
+//we are using two stacks: numStacks for number and opStack for operator
+//nTop : index of top number in the numStacks 
+//opTop : index of top operator in the opStack
 int calc(char *exp, int *err) {
     int numStack[SIZE], nTop=-1;     
     char opStack[SIZE]; int oTop=-1;
@@ -82,6 +91,7 @@ int calc(char *exp, int *err) {
     return numStack[nTop];
 }
 
+//this is the main function
 int main() {
     char expression[SIZE];
        printf("Enter the expression: ");
