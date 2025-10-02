@@ -9,6 +9,8 @@ struct Record {
     int years;
     };
 
+//create a new user in a file
+//if fille not exist then create file: records.txt
 void addRecord() {
     struct Record r;
     FILE *fp = fopen(FILE_NAME, "a");
@@ -31,7 +33,7 @@ void addRecord() {
      printf("Record inserted\n");
 }
 
-
+   //All records will show 
 void showAll() {
     struct Record r;
     FILE *fp = fopen(FILE_NAME, "r");
@@ -49,7 +51,7 @@ void showAll() {
 }
 
 
-
+//update the existng recod according to the ID
 void updaterecordbyId() {
     int id, ok = 0;
     struct Record r;
@@ -90,7 +92,7 @@ void updaterecordbyId() {
 
 
 
-
+//remove the record by id:
 void removeRecord() {
     int id, ok = 0;
     struct Record r;
@@ -126,7 +128,7 @@ void removeRecord() {
 
 
 
-
+//main() function starts form here 
 int main() {
     int choice;
     while (1) {
