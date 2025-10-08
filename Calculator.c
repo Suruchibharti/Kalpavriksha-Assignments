@@ -3,92 +3,93 @@
 
 #define MAX_SIZE 900   
 
-//use to check operator
-int isOperator(char c) {
-    return (c=='+' || c=='-' || c=='*' || c=='/');
+// Checks if a character is an operator
+int isOperator(char character) {
+    return (character == '+' || character == '-' || character == '*' || character == '/');
 }
 
-//use for priority check of operator
-int getPrecedence(char c) {
-    if (c == '/') return 3;   // Changed precedence for strict DMAS
-    if (c == '*') return 2;
-    if (c == '+') return 1;
-    if (c == '-') return 0;
+// Returns the precedence of an operator
+int getPrecedence(char operatorChar) {
+    if (operatorChar == '/') return 3;   // Highest priority for strict DMAS
+    if (operatorChar == '*') return 2;
+    if (operatorChar == '+') return 1;
+    if (operatorChar == '-') return 0;
     return -1;
 }
 
-//use for evaluate the operation b/w two operand
-int performOperation(int x, int y, char c, int *err) {
-    if (c=='+') return x+y;
-    if (c=='-') return x-y;
-    if (c=='*') return x*y;
-    if (c=='/') {
-        if (y==0) {
-            *err=1; return 0;
+// Performs the operation between two operands
+int performOperation(int leftOperand, int rightOperand, char operatorChar, int *errorFlag) {
+    if (operatorChar == '+') return leftOperand + rightOperand;
+    if (operatorChar == '-') return leftOperand - rightOperand;
+    if (operatorChar == '*') return leftOperand * rightOperand;
+    if (operatorChar == '/') {
+        if (rightOperand == 0) {
+            *errorFlag = 1; 
+            return 0;
         }
-        return x/y;
+        return leftOperand / rightOperand;
     }
     return 0;
 }
 
-//use to check space
-int isSpace(char c) {
-    return (c == ' ');
+// Checks if a character is a space
+int isSpace(char character) {
+    return (character == ' ');
 }
 
-//use to check digit
-int isDigit(char c) {
-    return (c >= '0' && c <= '9');
+// Checks if a character is a digit
+int isDigit(char character) {
+    return (character >= '0' && character <= '9');
 }
 
-// merge numbers with spaces like "2 2" → 22
-int parseNumber(char *exp, int *i, int len) {
-    int val = 0;
-    while (*i < len) {
-        if (isSpace(exp[*i])) {
-            (*i)++; // skip space between digits
+// Parses and merges digits into a number, handling spaces between them (e.g., "2 2" → 22)
+int parseNumber(char *expression, int *index, int length) {
+    int value = 0;
+    while (*index < length) {
+        if (isSpace(expression[*index])) {
+            (*index)++; // skip spaces
             continue;
         }
-        if (!isDigit(exp[*i])) break;
-        val = val * 10 + (exp[*i] - '0');
-        (*i)++;
+        if (!isDigit(expression[*index])) break;
+        value = value * 10 + (expression[*index] - '0');
+        (*index)++;
     }
-    return val;
+    return value;
 }
 
-//it evaluates the expression
+// Evaluates a mathematical expression
 int evaluateExpression(char *expression, int *errorFlag) {
     int numberStack[MAX_SIZE], numberTop = -1;     
     char operatorStack[MAX_SIZE]; 
     int operatorTop = -1;
-    int length = strlen(expression);
+    int expressionLength = strlen(expression);
 
-    for (int i = 0; i < length;) {
-        if (isSpace(expression[i])) { 
-            i++; 
+    for (int index = 0; index < expressionLength;) {
+        if (isSpace(expression[index])) { 
+            index++; 
             continue; 
         }
 
-        if (isDigit(expression[i])) {
-            int value = parseNumber(expression, &i, length);
-            numberStack[++numberTop] = value;
+        if (isDigit(expression[index])) {
+            int numberValue = parseNumber(expression, &index, expressionLength);
+            numberStack[++numberTop] = numberValue;
             continue;
         }
 
-        if (isOperator(expression[i])) {
-            while (operatorTop >= 0 && getPrecedence(operatorStack[operatorTop]) > getPrecedence(expression[i])) {
+        if (isOperator(expression[index])) {
+            while (operatorTop >= 0 && getPrecedence(operatorStack[operatorTop]) > getPrecedence(expression[index])) {
                 int rightOperand = numberStack[numberTop--];
                 int leftOperand = numberStack[numberTop--];
                 char currentOperator = operatorStack[operatorTop--];
                 numberStack[++numberTop] = performOperation(leftOperand, rightOperand, currentOperator, errorFlag);
                 if (*errorFlag) return 0;
             }
-            operatorStack[++operatorTop] = expression[i];
+            operatorStack[++operatorTop] = expression[index];
         } else {
             *errorFlag = 2;
             return 0;
         }
-        i++;
+        index++;
     }
 
     // Process remaining operators
@@ -103,9 +104,9 @@ int evaluateExpression(char *expression, int *errorFlag) {
     return numberStack[numberTop];
 }
 
-//this is the main function
+// Main function
 int main() {
-     char expression[MAX_SIZE];
+    char expression[MAX_SIZE];
     printf("Enter the expression: ");
     scanf(" %[^\n]", expression);  // Read expression including spaces
 
@@ -119,5 +120,5 @@ int main() {
     else 
         printf("Output = %d\n", result);
 
-   return 0;
+    return 0;
 }
