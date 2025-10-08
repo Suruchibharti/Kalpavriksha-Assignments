@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SIZE 900   
+#define MAX_SIZE 900   
 
 //use to check operator
-int operatorCheck(char c) {
+int isOperator(char c) {
     return (c=='+' || c=='-' || c=='*' || c=='/');
 }
 
 //use for priority check of operator
-int precedence(char c) {
+int getPrecedence(char c) {
     if (c == '/') return 3;   // Changed precedence for strict DMAS
     if (c == '*') return 2;
     if (c == '+') return 1;
@@ -18,7 +18,7 @@ int precedence(char c) {
 }
 
 //use for evaluate the operation b/w two operand
-int calculateTheOperations(int x, int y, char c, int *err) {
+int performOperation(int x, int y, char c, int *err) {
     if (c=='+') return x+y;
     if (c=='-') return x-y;
     if (c=='*') return x*y;
@@ -32,24 +32,24 @@ int calculateTheOperations(int x, int y, char c, int *err) {
 }
 
 //use to check space
-int is_space(char c) {
+int isSpace(char c) {
     return (c == ' ');
 }
 
 //use to check digit
-int is_digit(char c) {
+int isDigit(char c) {
     return (c >= '0' && c <= '9');
 }
 
 // merge numbers with spaces like "2 2" → 22
-int parse_number(char *exp, int *i, int len) {
+int parseNumber(char *exp, int *i, int len) {
     int val = 0;
     while (*i < len) {
-        if (is_space(exp[*i])) {
+        if (isSpace(exp[*i])) {
             (*i)++; // skip space between digits
             continue;
         }
-        if (!is_digit(exp[*i])) break;
+        if (!isDigit(exp[*i])) break;
         val = val * 10 + (exp[*i] - '0');
         (*i)++;
     }
@@ -57,60 +57,67 @@ int parse_number(char *exp, int *i, int len) {
 }
 
 //it evaluates the expression
-int calc(char *exp, int *err) {
-    int numStack[SIZE], nTop=-1;     
-    char opStack[SIZE]; int oTop=-1;
-    int len = strlen(exp);
+int evaluateExpression(char *expression, int *errorFlag) {
+    int numberStack[MAX_SIZE], numberTop = -1;     
+    char operatorStack[MAX_SIZE]; 
+    int operatorTop = -1;
+    int length = strlen(expression);
 
-    for (int i = 0; i < len;) {
-        if (is_space(exp[i])) { i++; continue; }
+    for (int i = 0; i < length;) {
+        if (isSpace(expression[i])) { 
+            i++; 
+            continue; 
+        }
 
-        if (is_digit(exp[i])) {
-           
-            int val = parse_number(exp, &i, len);
-            numStack[++nTop] = val;
+        if (isDigit(expression[i])) {
+            int value = parseNumber(expression, &i, length);
+            numberStack[++numberTop] = value;
             continue;
         }
 
-        if (operatorCheck(exp[i])) {
-            while (oTop >= 0 && precedence(opStack[oTop]) > precedence(exp[i])) {
-                int b = numStack[nTop--];
-                int a = numStack[nTop--];
-                char op = opStack[oTop--];
-                numStack[++nTop] = calculateTheOperations(a, b, op, err);
-                if (*err) return 0;
+        if (isOperator(expression[i])) {
+            while (operatorTop >= 0 && getPrecedence(operatorStack[operatorTop]) > getPrecedence(expression[i])) {
+                int rightOperand = numberStack[numberTop--];
+                int leftOperand = numberStack[numberTop--];
+                char currentOperator = operatorStack[operatorTop--];
+                numberStack[++numberTop] = performOperation(leftOperand, rightOperand, currentOperator, errorFlag);
+                if (*errorFlag) return 0;
             }
-            opStack[++oTop] = exp[i];
+            operatorStack[++operatorTop] = expression[i];
         } else {
-            *err = 2; return 0;
+            *errorFlag = 2;
+            return 0;
         }
         i++;
     }
 
-    // Remaining operations
-    while (oTop >= 0) {
-        int b = numStack[nTop--];
-        int a = numStack[nTop--];
-        char op = opStack[oTop--];
-        numStack[++nTop] = calculateTheOperations(a, b, op, err);
-        if (*err) return 0;
+    // Process remaining operators
+    while (operatorTop >= 0) {
+        int rightOperand = numberStack[numberTop--];
+        int leftOperand = numberStack[numberTop--];
+        char currentOperator = operatorStack[operatorTop--];
+        numberStack[++numberTop] = performOperation(leftOperand, rightOperand, currentOperator, errorFlag);
+        if (*errorFlag) return 0;
     }
 
-    return numStack[nTop];
+    return numberStack[numberTop];
 }
 
 //this is the main function
 int main() {
-    char expression[SIZE];
+     char expression[MAX_SIZE];
     printf("Enter the expression: ");
-    scanf(" %[^\n]", expression);  // fixes space reading
+    scanf(" %[^\n]", expression);  // Read expression including spaces
 
-    int err=0;
-    int output=calc(expression, &err);
+    int errorFlag = 0;
+    int result = evaluateExpression(expression, &errorFlag);
 
-    if (err==1) printf("Error: Division by zero.\n");
-    else if (err==2) printf("Error: Invalid expression.\n");
-    else printf("Output = %d\n", output);
+    if (errorFlag == 1) 
+        printf("Error: Division by zero.\n");
+    else if (errorFlag == 2) 
+        printf("Error: Invalid expression.\n");
+    else 
+        printf("Output = %d\n", result);
 
-return 0;
+   return 0;
 }
