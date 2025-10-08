@@ -2,155 +2,163 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define FILE_NAME "records.txt"
+#define FILE_NAME "records.txt"   // File to store user records
 
+// Structure to hold a user record
 struct Record {
-    int id;
-    char fullname[60];
-    int years;
-    };
+    int userId;
+    char fullName[60];
+    int userAge;
+};
 
-//create a new user in a file
-//if fille not exist then create file: records.txt
+// Function to create a new record in the file
+// If file doesn't exist, it will be created automatically
 void addRecord() {
-    struct Record r;
-    FILE *fp = fopen(FILE_NAME, "a");
-     if (fp == NULL) {
-        printf("File not opened\n");
+    struct Record userRecord;
+    FILE *filePointer = fopen(FILE_NAME, "a");   // Open file in append mode
+
+    if (filePointer == NULL) {
+        printf("Error: Unable to open the file.\n");
         return;
     }
 
-    printf("Enter id No: ");
-    scanf("%d", &r.id);
-    getchar();
-       printf("Enter Name: ");
-    fgets(r.fullname, sizeof(r.fullname), stdin);
-    r.fullname[strcspn(r.fullname, "\n")] = '\0';
-       printf("Enter Age: ");
-    scanf("%d", &r.years);
+    printf("Enter User ID: ");
+    scanf("%d", &userRecord.userId);
+    getchar(); // consume newline
 
-    fprintf(fp, "%d,%s,%d\n", r.id, r.fullname, r.years);
-       fclose(fp);
-     printf("Record inserted\n");
+    printf("Enter Full Name: ");
+    fgets(userRecord.fullName, sizeof(userRecord.fullName), stdin);
+    userRecord.fullName[strcspn(userRecord.fullName, "\n")] = '\0';
+
+    printf("Enter Age: ");
+    scanf("%d", &userRecord.userAge);
+
+    fprintf(filePointer, "%d,%s,%d\n", userRecord.userId, userRecord.fullName, userRecord.userAge);
+    fclose(filePointer);
+
+    printf("Record added successfully.\n");
 }
 
-   //All records will show 
-void showAll() {
-    struct Record r;
-    FILE *fp = fopen(FILE_NAME, "r");
-    if (fp == NULL) {
-        printf("No data int the file found.\n");
+// Function to display all records
+void showAllRecords() {
+    struct Record userRecord;
+    FILE *filePointer = fopen(FILE_NAME, "r");
+
+    if (filePointer == NULL) {
+        printf("No data found in the file.\n");
         return;
     }
 
-    printf("\n--- All Records ---\n");
-      printf("ID\tName\tAge\n");
-    while (fscanf(fp, "%d,%[^,],%d\n", &r.id, r.fullname, &r.years) != EOF) {
-        printf("%d\t%s\t%d\n", r.id, r.fullname, r.years);
+    printf("\n--- All User Records ---\n");
+    printf("User ID\tName\t\tAge\n");
+
+    while (fscanf(filePointer, "%d,%[^,],%d\n", &userRecord.userId, userRecord.fullName, &userRecord.userAge) != EOF) {
+        printf("%d\t%-15s\t%d\n", userRecord.userId, userRecord.fullName, userRecord.userAge);
     }
-    fclose(fp);
+
+    fclose(filePointer);
 }
 
+// Function to update a record by User ID
+void updateRecordById() {
+    int targetId, recordFound = 0;
+    struct Record userRecord;
+    FILE *filePointer = fopen(FILE_NAME, "r");
+    FILE *tempFile = fopen("temp.txt", "w");
 
-//update the existng recod according to the ID
-void updaterecordbyId() {
-    int id, ok = 0;
-    struct Record r;
-      FILE *fp = fopen(FILE_NAME, "r");
-    FILE *temp = fopen("temp.txt", "w");
-    if (!fp || !temp) {
-        printf("Error in opening the file\n");
+    if (!filePointer || !tempFile) {
+        printf("Error: Unable to open file.\n");
         return;
     }
 
-    printf("Enter id to modify the record: ");
-    scanf("%d", &id);
+    printf("Enter User ID to update: ");
+    scanf("%d", &targetId);
     getchar();
 
-    while (fscanf(fp, "%d,%[^,],%d\n", &r.id, r.fullname, &r.years) != EOF) {
-        if (r.id == id) {
-            ok = 1;
-            printf("New Name: ");
-              fgets(r.fullname, sizeof(r.fullname), stdin);
-            r.fullname[strcspn(r.fullname, "\n")] = '\0';
-              printf("New Age: ");
-            scanf("%d", &r.years);
+    while (fscanf(filePointer, "%d,%[^,],%d\n", &userRecord.userId, userRecord.fullName, &userRecord.userAge) != EOF) {
+        if (userRecord.userId == targetId) {
+            recordFound = 1;
+            printf("Enter New Full Name: ");
+            fgets(userRecord.fullName, sizeof(userRecord.fullName), stdin);
+            userRecord.fullName[strcspn(userRecord.fullName, "\n")] = '\0';
+            printf("Enter New Age: ");
+            scanf("%d", &userRecord.userAge);
             getchar();
         }
-        fprintf(temp, "%d,%s,%d\n", r.id, r.fullname, r.years);
+        fprintf(tempFile, "%d,%s,%d\n", userRecord.userId, userRecord.fullName, userRecord.userAge);
     }
 
-    fclose(fp);
-    fclose(temp);
+    fclose(filePointer);
+    fclose(tempFile);
 
     remove(FILE_NAME);
     rename("temp.txt", FILE_NAME);
 
-    if (ok) printf("Updated successfully\n");
-    else printf("Not Found\n");
+    if (recordFound)
+        printf("Record updated successfully.\n");
+    else
+        printf("Record not found.\n");
 }
 
+// Function to remove a record by User ID
+void removeRecordById() {
+    int targetId, recordFound = 0;
+    struct Record userRecord;
+    FILE *filePointer = fopen(FILE_NAME, "r");
+    FILE *tempFile = fopen("temp.txt", "w");
 
-
-
-//remove the record by id:
-void removeRecord() {
-    int id, ok = 0;
-    struct Record r;
-    FILE *fp = fopen(FILE_NAME, "r");
-    FILE *temp = fopen("temp.txt", "w");
-    if (!fp || !temp) {
-        printf("File error!\n");
+    if (!filePointer || !tempFile) {
+        printf("Error: Unable to open file.\n");
         return;
     }
 
-    printf("Enter id to delete: ");
-    scanf("%d", &id);
+    printf("Enter User ID to delete: ");
+    scanf("%d", &targetId);
 
-    while (fscanf(fp, "%d,%[^,],%d\n", &r.id, r.fullname, &r.years) != EOF) {
-        if (r.id == id) {
-            ok = 1;
+    while (fscanf(filePointer, "%d,%[^,],%d\n", &userRecord.userId, userRecord.fullName, &userRecord.userAge) != EOF) {
+        if (userRecord.userId == targetId) {
+            recordFound = 1;
             continue;
         }
-        fprintf(temp, "%d,%s,%d\n", r.id, r.fullname, r.years);
+        fprintf(tempFile, "%d,%s,%d\n", userRecord.userId, userRecord.fullName, userRecord.userAge);
     }
 
-    fclose(fp);
-    fclose(temp);
+    fclose(filePointer);
+    fclose(tempFile);
 
     remove(FILE_NAME);
     rename("temp.txt", FILE_NAME);
 
-    if (ok) printf("Deleted successfully\n");
-    else printf("Not Found\n");
+    if (recordFound)
+        printf("Record deleted successfully.\n");
+    else
+        printf("Record not found.\n");
 }
 
-
-
-
-
-//main() function starts form here 
+// Main function — menu-driven program
 int main() {
-    int choice;
+    int userChoice;
+
     while (1) {
-        printf("\n--- Type the options of menu ---\n");
+        printf("\n--- MENU ---\n");
         printf("1. Add User\n");
-         printf("2. Display Users\n");
+        printf("2. Display All Users\n");
         printf("3. Update User\n");
-         printf("4. Delete User\n");
+        printf("4. Delete User\n");
         printf("5. Exit\n");
         printf("Enter your choice: ");
-        scanf("%d", &choice);
+        scanf("%d", &userChoice);
         getchar();
 
-        switch (choice) {
+        switch (userChoice) {
             case 1: addRecord(); break;
-            case 2: showAll(); break;
-            case 3: updaterecordbyId(); break;
-            case 4: removeRecord(); break;
+            case 2: showAllRecords(); break;
+            case 3: updateRecordById(); break;
+            case 4: removeRecordById(); break;
             case 5: exit(0);
-            default: printf("Invalid choice, Try again.\n");
+            default: printf("Invalid choice. Try again.\n");
         }
     }
+
     return 0;
 }
