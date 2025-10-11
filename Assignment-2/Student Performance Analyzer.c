@@ -26,9 +26,9 @@ int main() {
     for (int i = 0; i < totalStudents - 1; i++) {
         for (int j = i + 1; j < totalStudents; j++) {
             if (students[i].rollNumber > students[j].rollNumber) {
-                struct Student temperoryStudent = students[i];
+                struct Student temporaryStudent = students[i];
                 students[i] = students[j];
-                students[j] = temperoryStudent;
+                students[j] = temporaryStudent;
             }
         }
     }
