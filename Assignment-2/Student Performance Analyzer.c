@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-
+// Structure for student information:
 struct Student {
     int rollNumber;
     char studentName[50];
@@ -11,6 +11,7 @@ struct Student {
     char grade;
 };
 
+// Function to calculate total marks
 float calculateTotal(float marks[]) {
     float total = 0;
     for (int i = 0; i < 3; i++) {
@@ -19,10 +20,12 @@ float calculateTotal(float marks[]) {
     return total;
 }
 
+//  calculate average marks
 float calculateAverage(float totalMarks) {
     return totalMarks / 3.0;
 }
 
+// assign grades based on average
 char getGrade(float averageMarks) {
     if (averageMarks >= 85) return 'A';
     else if (averageMarks >= 70) return 'B';
@@ -31,6 +34,7 @@ char getGrade(float averageMarks) {
     else return 'F';
 }
 
+// display performance stars based on grade
 void showPerformance(char grade) {
     int starCount = 0;
 
@@ -48,6 +52,7 @@ void showPerformance(char grade) {
     printf("\n");
 }
 
+// Recursive function to print all roll numbers
 void printRollNumbers(struct Student students[], int index, int totalStudents) {
     if (index == totalStudents) return;
     printf("%d ", students[index].rollNumber);
@@ -76,6 +81,7 @@ int main() {
         students[i].grade = getGrade(students[i].averageMarks);
     }
 
+     // Sort students by roll number
     for (int i = 0; i < totalStudents - 1; i++) {
         for (int j = i + 1; j < totalStudents; j++) {
             if (students[i].rollNumber > students[j].rollNumber) {
@@ -88,6 +94,7 @@ int main() {
 
     printf("\n\n");
 
+    // Display student results
     for (int i = 0; i < totalStudents; i++) {
         printf("Roll: %d\n", students[i].rollNumber);
         printf("Name: %s\n", students[i].studentName);
