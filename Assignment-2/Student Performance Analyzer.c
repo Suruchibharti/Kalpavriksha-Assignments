@@ -65,6 +65,13 @@ int main() {
     printf("Enter the number of students: ");
     scanf("%d", &totalStudents);
 
+    // validate number of students (1 ≤ N ≤ 100)
+    while (totalStudents < 1 || totalStudents > 100) {
+        printf("Invalid input! Number of students must be between 1 and 100.\n");
+        printf("Re-enter number of students: ");
+        scanf("%d", &totalStudents);
+    }
+    
     struct Student students[totalStudents];
 
     for (int i = 0; i < totalStudents; i++) {
@@ -76,6 +83,21 @@ int main() {
               &students[i].marks[1],
               &students[i].marks[2]);
 
+        //marks>=0 and marks <=100
+       for(int j=0; j<3; j++){
+                bool flag = true;
+                while(flag){
+                if(students[i].marks[j] <0 || students[i].marks[j] > 100) {
+                    printf("enter the correct marks%d ", j+1);
+                    scanf("%f",&students[i].marks[j]);
+
+                }
+                else {
+                    flag= false;
+                }
+            }
+          } 
+        
         students[i].totalMarks = calculateTotal(students[i].marks);
         students[i].averageMarks = calculateAverage(students[i].totalMarks);
         students[i].grade = getGrade(students[i].averageMarks);
