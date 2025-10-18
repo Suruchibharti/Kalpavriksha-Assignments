@@ -103,11 +103,13 @@ void applySmoothingFilter(int **matrix, int size) {
 
 int main() {
     int size;
+    char ch;
+
     printf("Enter matrix size : ");
-    scanf("%d", &size) ;
-    
-    if (size < 2 || size > 10) {
-        printf("Invalid input, Please enter a number between 2 and 10.\n");
+
+ 
+    if (scanf("%d%c", &size, &ch) != 2 || ch != '\n' || size < 2 || size > 10) {
+        printf("Invalid input! Please enter a number between 2 and 10.\n");
         return 1;
     }
 
