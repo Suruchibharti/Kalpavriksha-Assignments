@@ -23,11 +23,11 @@ void printMatrix(int **matrix, int size) {
 }
 
 // Rotate the matrix 90° clockwise in-place
-void rotateMatrix90Clockwise(int ***matrix, int size) {
+void rotateMatrix90Clockwise(int **matrix, int size) {
     for (int row = 0; row < size; row++) {
         for (int col = row + 1; col < size; col++) {
-            int *elementPtr1 = *(*matrix + row) + col;
-            int *elementPtr2 = *(*matrix + col) + row;
+            int *elementPtr1 = *(matrix + row) + col;
+            int *elementPtr2 = *(matrix + col) + row;
             int temp = *elementPtr1;
             *elementPtr1 = *elementPtr2;
             *elementPtr2 = temp;
@@ -35,7 +35,7 @@ void rotateMatrix90Clockwise(int ***matrix, int size) {
     }
 
     for (int row = 0; row < size; row++) {
-        int *leftPtr = *(*matrix + row);
+        int *leftPtr = *(matrix + row);
         int *rightPtr = leftPtr + size - 1;
 
         while (leftPtr < rightPtr) {
@@ -47,6 +47,7 @@ void rotateMatrix90Clockwise(int ***matrix, int size) {
         }
     }
 }
+
 
 // Apply smoothing filter 
 void applySmoothingFilter(int **matrix, int size) {
@@ -121,7 +122,7 @@ int main() {
     printf("\nOriginal Randomly Generated Matrix:\n");
     printMatrix(matrix, size);
 
-    rotateMatrix90Clockwise(&matrix, size);
+    rotateMatrix90Clockwise(matrix, size);
     printf("\nMatrix after 90 degree Clockwise Rotation:\n");
     printMatrix(matrix, size);
 
