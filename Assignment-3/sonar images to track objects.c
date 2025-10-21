@@ -4,7 +4,7 @@
 
 // Generate a random N×N matrix with values 0–255
 void generateRandomMatrix(int **matrixData, int matrixSize) {
-    srand(time(0));
+  
     for (int rowIndex = 0; rowIndex < matrixSize; rowIndex++) {
         for (int colIndex = 0; colIndex < matrixSize; colIndex++) {
             *(*(matrixData + rowIndex) + colIndex) = rand() % 256;
@@ -56,10 +56,18 @@ void applySmoothingFilter(int **matrixData, int matrixSize) {
     int *currRow = (int *)malloc(matrixSize * sizeof(int));
     int *nextRow = (int *)malloc(matrixSize * sizeof(int));
 
-    // Initialize prevRow and currRow with the first row’s values
+     if (prevRow == NULL || currRow == NULL || nextRow == NULL) {
+        printf("Memory allocation failed while creating row buffers!\n");
+        free(prevRow);
+        free(currRow);
+        free(nextRow);
+        return ;
+    }
+    
     for (int colIndex = 0; colIndex < matrixSize; colIndex++) {
-        *(prevRow + colIndex) = *(*(matrixData + 0) + colIndex);
+        *(prevRow + colIndex) = 0;  // Prevent uninitialized reads
         *(currRow + colIndex) = *(*(matrixData + 0) + colIndex);
+        *(nextRow + colIndex) = *(*(matrixData + 1) + colIndex);  
     }
 
     for (int rowIndex = 0; rowIndex < matrixSize; rowIndex++) {
@@ -77,9 +85,17 @@ void applySmoothingFilter(int **matrixData, int matrixSize) {
                     continue;
 
                 int *rowPointer;
-                if (rowOffset == -1) rowPointer = prevRow;
+                if (rowOffset == -1) {
+                    // Skip prevRow for first row - prevent incorrect averaging
+                    if (rowIndex == 0) continue;
+                    rowPointer = prevRow;
+                }
                 else if (rowOffset == 0) rowPointer = currRow;
-                else rowPointer = nextRow;
+                else {
+                    // Skip nextRow for last row - prevent incorrect averaging
+                    if (rowIndex == matrixSize - 1) continue;
+                    rowPointer = nextRow;
+                }
 
                 for (int colOffset = -1; colOffset <= 1; colOffset++) {
                     int neighborCol = colIndex + colOffset;
@@ -91,10 +107,13 @@ void applySmoothingFilter(int **matrixData, int matrixSize) {
                 }
             }
 
-            *(*(matrixData + rowIndex) + colIndex) = sum / count;
+            if (count > 0) {
+                *(*(matrixData + rowIndex) + colIndex) = sum / count;
+            }
         }
 
         if (rowIndex < matrixSize - 1) {
+            // Shift rows: prevRow = currRow, currRow = nextRow
             for (int colIndex = 0; colIndex < matrixSize; colIndex++)
                 *(prevRow + colIndex) = *(currRow + colIndex);
             for (int colIndex = 0; colIndex < matrixSize; colIndex++)
@@ -118,8 +137,15 @@ int main() {
         return 1;
     }
 
+      srand(time(0));
+    
     // Allocate memory for matrix
     int **matrixData = (int **)malloc(matrixSize * sizeof(int *));
+     if (matrixData == NULL) {
+        printf("Memory allocation failed for matrix rows!\n");
+        return 1;
+    }
+    
     for (int rowIndex = 0; rowIndex < matrixSize; rowIndex++)
         *(matrixData + rowIndex) = (int *)malloc(matrixSize * sizeof(int));
 
