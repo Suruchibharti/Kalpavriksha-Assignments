@@ -108,21 +108,24 @@ int main()
                 break;
         }
 
-        printf("Product Quantity: ");
+        printf("Enter new Quantity (0 - 1000000): ");
         while (true)
         {
-            fgets(userInput, sizeof(userInput), stdin);
-            int scannedItems = sscanf(userInput, "%d %c", &inventory[productNo].productQuantity, &extraChar);
+            int newQuantity;
+            char buffer[50], extraChar;
+            fgets(buffer, sizeof(buffer), stdin);
+            int scannedItems = sscanf(buffer, "%d %c", &newQuantity, &extraChar);
 
-            if (!((scannedItems == 1 || (scannedItems == 2 && extraChar == '\n')) &&
-                  (inventory[productNo].productQuantity >= 0 && inventory[productNo].productQuantity <= 1000000)))
+            if (scannedItems != 1 || (scannedItems == 2 && extraChar != '\n') ||
+                newQuantity < 0 || newQuantity > 1000000)
             {
-                printf("Please enter a product quantity between 0 and 1000000.\n");
+                printf("Please enter a valid quantity between 0 and 1000000: ");
                 continue;
             }
 
-            else
-                break;
+            inventory[productNo].productQuantity = newQuantity;
+            printf("Quantity updated successfully!\n");
+            break;
         }
     }
 
@@ -256,16 +259,21 @@ void addNewProduct(Product **inventory, int *productCount)
     printf("Product Quantity: ");
     while (true)
     {
-        fgets(userInput, sizeof(userInput), stdin);
-        int scannedItems = sscanf(userInput, "%d %c", &(*inventory)[*productCount].productQuantity, &extraChar);
+        int newQuantity;
+        char buffer[50], extraChar;
+        fgets(buffer, sizeof(buffer), stdin);
+        int scannedItems = sscanf(buffer, "%d %c", &newQuantity, &extraChar);
 
-        if (!((scannedItems == 1 || (scannedItems == 2 && extraChar == '\n')) && ((*inventory)[*productCount].productQuantity >= 0 && (*inventory)[*productCount].productQuantity <= 1000000)))
+        if (scannedItems != 1 || (scannedItems == 2 && extraChar != '\n') ||
+            newQuantity < 0 || newQuantity > 1000000)
         {
-            printf("Please enter a product-quantity between 0 and 1000000.\n");
+            printf("Please enter a valid quantity between 0 and 1000000: ");
             continue;
         }
-        else
-            break;
+
+        (*inventory)[*productCount].productQuantity = newQuantity;
+        printf("Quantity updated successfully!\n");
+        break;
     }
 
     (*productCount)++;
