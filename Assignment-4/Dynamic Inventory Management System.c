@@ -95,7 +95,7 @@ int main()
         while (true)
         {
             fgets(userInput, sizeof(userInput), stdin);
-            int scannedItems = sscanf(input_buffer, "%f %c", &inventory[productNo].productPrice, &extraChar);
+            int scannedItems = sscanf(userInput, "%f %c", &inventory[productNo].productPrice, &extraChar);
 
             if (!((scannedItems == 1 || (scannedItems == 2 && extraChar == '\n')) &&
                   (inventory[productNo].productPrice >= 0 && inventory[productNo].productPrice <= 100000)))
