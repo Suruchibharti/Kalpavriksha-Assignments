@@ -351,36 +351,58 @@ void searchProductById(Product *inventory, int productCount)
     printf("Product not found.\n");
 }
 
-// Function to search product by name (partial match)
+void clearInputBuffer()
+{
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+        
+}
+
 void searchProductByName(Product *inventory, int productCount)
 {
     char nameSearch[MAX_NAME_LENGTH];
     int found = 0;
 
-    printf("Enter name to search (partial allowed): ");
-    getchar();
-    fgets(nameSearch, sizeof(nameSearch), stdin);
-    nameSearch[strcspn(nameSearch, "\n")] = '\0';
+    clearInputBuffer(); 
 
-    if (strlen(nameSearch) == 0)
+    while (1)
     {
-        printf("Name cannot be empty.\n");
-        return;
-    }
+        printf("Enter product name to search (partial match allowed): ");
+        fgets(nameSearch, sizeof(nameSearch), stdin);
+        nameSearch[strcspn(nameSearch, "\n")] = '\0'; 
 
-    printf("Products Found:\n");
-    for (int i = 0; i < productCount; i++)
-    {
-        if (strstr(inventory[i].productName, nameSearch) != NULL)
+        // Remove leading/trailing spaces
+        int len = strlen(nameSearch);
+        while (len > 0 && nameSearch[len - 1] == ' ')
+            nameSearch[--len] = '\0';
+        int start = 0;
+        while (nameSearch[start] == ' ')
+            start++;
+        memmove(nameSearch, nameSearch + start, strlen(nameSearch + start) + 1);
+
+        if (strlen(nameSearch) == 0)
         {
-            printf("Product ID: %d | Name: %s | Price: %.2f | Quantity: %d\n",
-                   inventory[i].productId, inventory[i].productName,
-                   inventory[i].productPrice, inventory[i].productQuantity);
-            found = 1;
+            printf("Product name cannot be empty. Please try again.\n\n");
+            continue; 
         }
+
+        printf("\nProducts Found:\n");
+        for (int i = 0; i < productCount; i++)
+        {
+            if (strstr(inventory[i].productName, nameSearch) != NULL)
+            {
+                printf("Product ID: %d | Name: %s | Price: %.2f | Quantity: %d\n",
+                       inventory[i].productId, inventory[i].productName,
+                       inventory[i].productPrice, inventory[i].productQuantity);
+                found = 1;
+            }
+        }
+
+        if (!found)
+            printf("No products found matching '%s'.\n", nameSearch);
+
+        break; // exit loop after successful (non-empty) search
     }
-    if (!found)
-        printf("No products found matching '%s'.\n", nameSearch);
 }
 
 // Function to search products by price range
