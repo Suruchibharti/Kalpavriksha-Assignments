@@ -67,7 +67,7 @@ int main()
             if ((scannedItems == 1 || (scannedItems == 2 && extraChar == '\n')) &&
                 (temp_id >= 1 && temp_id <= 10000))
             {
-                if (checkIdExist(inventory, initial_totalProduct, temp_id))
+                if (checkIdExist(inventory, productNo , temp_id))
                 {
                     printf("Product with this ID already exists, Please use a unique ID.\n");
                     continue;
