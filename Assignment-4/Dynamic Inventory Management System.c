@@ -23,6 +23,7 @@ void searchProductByPriceRange(Product *inventory, int productCount);
 void deleteProductById(Product **inventory, int *productCount);
 void freeInventoryMemory(Product *inventory);
 bool checkIdExist(Product *inventory, int productCount, int product_id);
+void clearInputBuffer();
 
 int main()
 {
@@ -80,14 +81,14 @@ int main()
         while (true)
         {
             fgets(inventory[productNo].productName, sizeof(inventory[productNo].productName), stdin);
-            inventory[productNo].productName[strcspn(inventory[productNo].productName, "\n")] = '\0'; // remove newline
+            inventory[productNo].productName[strcspn(inventory[productNo].productName, "\n")] = '\0';
             if (strlen(inventory[productNo].productName) >= 1 && strlen(inventory[productNo].productName) <= 50)
             {
                 break;
             }
             else
             {
-                printf("Please enter a product name (1 to 50 characters)");
+                printf("Please enter a product name (1 to 50 characters): ");
             }
         }
 
@@ -103,12 +104,11 @@ int main()
                 printf("Please enter a product price between 0 and 100000.\n");
                 continue;
             }
-
             else
                 break;
         }
 
-        printf("Enter new Quantity (0 - 1000000): ");
+        printf("Enter Quantity (0 - 1000000): ");
         while (true)
         {
             int newQuantity;
@@ -126,7 +126,7 @@ int main()
             inventory[productNo].productQuantity = newQuantity;
             break;
         }
-           printf("Product updated successfully!\n");
+        printf("Product added successfully!\n");
     }
 
     int userChoice;
@@ -146,9 +146,10 @@ int main()
         while (scanf("%d", &userChoice) != 1)
         {
             printf("Invalid input. Enter a valid choice: ");
-            while (getchar() != '\n')
-                ;
+            clearInputBuffer();
         }
+
+        clearInputBuffer();
 
         switch (userChoice)
         {
@@ -180,6 +181,8 @@ int main()
         default:
             printf("Invalid choice! Please try again.\n");
         }
+
+        // Automatically reprint menu until exit
     } while (userChoice != 8);
 
     return 0;
@@ -200,7 +203,6 @@ void addNewProduct(Product **inventory, int *productCount)
     char extraChar;
 
     printf("Product ID: ");
-
     while (true)
     {
         int temp_id;
@@ -228,14 +230,14 @@ void addNewProduct(Product **inventory, int *productCount)
     while (true)
     {
         fgets((*inventory)[*productCount].productName, sizeof((*inventory)[*productCount].productName), stdin);
-        (*inventory)[*productCount].productName[strcspn((*inventory)[*productCount].productName, "\n")] = '\0'; // remove newline
+        (*inventory)[*productCount].productName[strcspn((*inventory)[*productCount].productName, "\n")] = '\0';
         if (strlen((*inventory)[*productCount].productName) >= 1 && strlen((*inventory)[*productCount].productName) <= 50)
         {
             break;
         }
         else
         {
-            printf("Please enter a product name (1 to 50 characters)");
+            printf("Please enter a product name (1 to 50 characters): ");
         }
     }
 
@@ -251,7 +253,6 @@ void addNewProduct(Product **inventory, int *productCount)
             printf("Please enter a product price between 0 and 100000.\n");
             continue;
         }
-
         else
             break;
     }
@@ -272,7 +273,6 @@ void addNewProduct(Product **inventory, int *productCount)
         }
 
         (*inventory)[*productCount].productQuantity = newQuantity;
-        printf("Quantity updated successfully!\n");
         break;
     }
 
@@ -298,6 +298,7 @@ void viewAllProducts(Product *inventory, int productCount)
     }
 }
 
+// Function to check if ID already exists
 bool checkIdExist(Product *inventory, int productCount, int product_id)
 {
     for (int i = 0; i < productCount; i++)
@@ -308,6 +309,14 @@ bool checkIdExist(Product *inventory, int productCount, int product_id)
         }
     }
     return false;
+}
+
+// Function to clear input buffer
+void clearInputBuffer()
+{
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF)
+        ;
 }
 
 // Function to update product quantity
@@ -325,10 +334,12 @@ void updateProductQuantity(Product *inventory, int productCount)
             scanf("%d", &newQuantity);
             inventory[i].productQuantity = newQuantity;
             printf("Quantity updated successfully!\n");
+            clearInputBuffer();
             return;
         }
     }
     printf("Product with ID %d not found.\n", searchId);
+    clearInputBuffer();
 }
 
 // Function to search product by ID
@@ -337,6 +348,7 @@ void searchProductById(Product *inventory, int productCount)
     int searchId;
     printf("Enter Product ID to search: ");
     scanf("%d", &searchId);
+    clearInputBuffer();
 
     for (int i = 0; i < productCount; i++)
     {
@@ -351,58 +363,36 @@ void searchProductById(Product *inventory, int productCount)
     printf("Product not found.\n");
 }
 
-void clearInputBuffer()
-{
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-        
-}
-
+// Function to search product by name
 void searchProductByName(Product *inventory, int productCount)
 {
     char nameSearch[MAX_NAME_LENGTH];
     int found = 0;
 
-    clearInputBuffer(); 
+    printf("Enter product name to search (partial match allowed): ");
+    fgets(nameSearch, sizeof(nameSearch), stdin);
+    nameSearch[strcspn(nameSearch, "\n")] = '\0';
 
-    while (1)
+    if (strlen(nameSearch) == 0)
     {
-        printf("Enter product name to search (partial match allowed): ");
-        fgets(nameSearch, sizeof(nameSearch), stdin);
-        nameSearch[strcspn(nameSearch, "\n")] = '\0'; 
-
-        // Remove leading/trailing spaces
-        int len = strlen(nameSearch);
-        while (len > 0 && nameSearch[len - 1] == ' ')
-            nameSearch[--len] = '\0';
-        int start = 0;
-        while (nameSearch[start] == ' ')
-            start++;
-        memmove(nameSearch, nameSearch + start, strlen(nameSearch + start) + 1);
-
-        if (strlen(nameSearch) == 0)
-        {
-            printf("Product name cannot be empty. Please try again.\n\n");
-            continue; 
-        }
-
-        printf("\nProducts Found:\n");
-        for (int i = 0; i < productCount; i++)
-        {
-            if (strstr(inventory[i].productName, nameSearch) != NULL)
-            {
-                printf("Product ID: %d | Name: %s | Price: %.2f | Quantity: %d\n",
-                       inventory[i].productId, inventory[i].productName,
-                       inventory[i].productPrice, inventory[i].productQuantity);
-                found = 1;
-            }
-        }
-
-        if (!found)
-            printf("No products found matching '%s'.\n", nameSearch);
-
-        break; // exit loop after successful (non-empty) search
+        printf("Product name cannot be empty.\n");
+        return;
     }
+
+    printf("\nProducts Found:\n");
+    for (int i = 0; i < productCount; i++)
+    {
+        if (strstr(inventory[i].productName, nameSearch) != NULL)
+        {
+            printf("Product ID: %d | Name: %s | Price: %.2f | Quantity: %d\n",
+                   inventory[i].productId, inventory[i].productName,
+                   inventory[i].productPrice, inventory[i].productQuantity);
+            found = 1;
+        }
+    }
+
+    if (!found)
+        printf("No products found matching '%s'.\n", nameSearch);
 }
 
 // Function to search products by price range
@@ -415,6 +405,7 @@ void searchProductByPriceRange(Product *inventory, int productCount)
     scanf("%f", &minPrice);
     printf("Enter maximum price: ");
     scanf("%f", &maxPrice);
+    clearInputBuffer();
 
     printf("Products in price range:\n");
     for (int i = 0; i < productCount; i++)
@@ -437,6 +428,7 @@ void deleteProductById(Product **inventory, int *productCount)
     int deleteId;
     printf("Enter Product ID to delete: ");
     scanf("%d", &deleteId);
+    clearInputBuffer();
 
     for (int i = 0; i < *productCount; i++)
     {
