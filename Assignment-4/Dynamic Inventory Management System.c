@@ -124,9 +124,9 @@ int main()
             }
 
             inventory[productNo].productQuantity = newQuantity;
-            printf("Quantity updated successfully!\n");
             break;
         }
+           printf("Product updated successfully!\n");
     }
 
     int userChoice;
