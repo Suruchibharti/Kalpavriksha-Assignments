@@ -315,8 +315,8 @@ bool checkIdExist(Product *inventory, int productCount, int product_id)
 void clearInputBuffer()
 {
     int c;
-    while ((c = getchar()) != '\n' && c != EOF)
-        ;
+    while ((c = getchar()) != '\n' && c != EOF);
+        
 }
 
 // Function to update product quantity
