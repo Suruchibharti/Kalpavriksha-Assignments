@@ -8,44 +8,32 @@
 #define DEFAULT_NUM_BLOCKS 1024
 #define MAX_NAME_LEN 50
 
-/* -------------------- Free block (doubly linked) -------------------- */
 typedef struct FreeBlock {
-    int blockIndex;                       // was 'index' - meaningful: index of block on virtual disk
-    struct FreeBlock *nextFree;           // was 'next'
-    struct FreeBlock *prevFree;           // was 'prev'
+    int blockIndex;
+    struct FreeBlock *nextFree;
+    struct FreeBlock *prevFree;
 } FreeBlock;
 
-/* -------------------- FileNode (file or directory) -------------------- */
 typedef struct FileNode {
-    char entryName[MAX_NAME_LEN + 1];     // was 'name' - meaningful: name of file or directory
-    int isDirectory;                      // 1 = dir, 0 = file
-    struct FileNode *parentDir;           // was 'parent'
-
-    // siblings for circular doubly-linked list inside a directory
-    struct FileNode *nextSibling;         // was 'next'
-    struct FileNode *prevSibling;         // was 'prev'
-
-    // if directory: pointer to first child (NULL if empty)
-    struct FileNode *firstChild;          // was 'children'
-
-    // if file:
-    int *allocatedBlockArray;             // was 'blockPointers' - list of allocated block indices
-    int blocksAllocated;                  // was 'blocksAllocated' - number of blocks allocated
-    long fileSizeBytes;                   // was 'fileSizeBytes' - actual byte size of file content
+    char entryName[MAX_NAME_LEN + 1];
+    int isDirectory;
+    struct FileNode *parentDir;
+    struct FileNode *nextSibling;
+    struct FileNode *prevSibling;
+    struct FileNode *firstChild;
+    int *allocatedBlockArray;
+    int blocksAllocated;
+    long fileSizeBytes;
 } FileNode;
 
-/* -------------------- Global Disk and Free List state -------------------- */
-static unsigned char *virtualDisk = NULL; // single buffer: NUM_BLOCKS * BLOCK_SIZE
+static unsigned char *virtualDisk = NULL;
 static int totalBlocks = DEFAULT_NUM_BLOCKS;
 static int freeBlockCount = 0;
 static FreeBlock *freeListHead = NULL;
 static FreeBlock *freeListTail = NULL;
-
-/* -------------------- FileSystem root and cwd -------------------- */
 static FileNode *rootDirectory = NULL;
 static FileNode *currentDirectory = NULL;
 
-/* -------------------- Utility: safe strdup replacement -------------------- */
 static char *strDupSafe(const char *inputString) {
     if (!inputString) return NULL;
     size_t inputLength = strlen(inputString) + 1;
@@ -55,7 +43,6 @@ static char *strDupSafe(const char *inputString) {
     return duplicateString;
 }
 
-/* -------------------- Free list helpers -------------------- */
 static void appendFreeBlockTail(int blockIndex) {
     FreeBlock *newFreeBlock = malloc(sizeof(FreeBlock));
     if (!newFreeBlock) { perror("malloc"); exit(EXIT_FAILURE); }
@@ -84,19 +71,14 @@ static int allocateBlockFromHead() {
     return allocatedIndex;
 }
 
-/* Initialize the virtual disk and free list */
 static void initializeFileSystem(int numBlocks) {
     totalBlocks = numBlocks;
     virtualDisk = malloc((size_t)totalBlocks * BLOCK_SIZE);
     if (!virtualDisk) { perror("malloc"); exit(EXIT_FAILURE); }
-    /* Initially zero (optional) */
     memset(virtualDisk, 0, (size_t)totalBlocks * BLOCK_SIZE);
-
     freeListHead = freeListTail = NULL;
     freeBlockCount = 0;
     for (int blockIndex = 0; blockIndex < totalBlocks; ++blockIndex) appendFreeBlockTail(blockIndex);
-
-    /* Create root directory */
     rootDirectory = malloc(sizeof(FileNode));
     if (!rootDirectory) { perror("malloc"); exit(EXIT_FAILURE); }
     memset(rootDirectory, 0, sizeof(FileNode));
@@ -108,12 +90,9 @@ static void initializeFileSystem(int numBlocks) {
     rootDirectory->allocatedBlockArray = NULL;
     rootDirectory->blocksAllocated = 0;
     rootDirectory->fileSizeBytes = 0;
-
     currentDirectory = rootDirectory;
 }
 
-/* -------------------- Directory child (circular list) helpers -------------------- */
-/* Find child by name (returns pointer or NULL) */
 static FileNode *findChildByName(FileNode *dirNode, const char *searchName) {
     if (!dirNode || !dirNode->isDirectory) return NULL;
     FileNode *childHead = dirNode->firstChild;
@@ -126,7 +105,6 @@ static FileNode *findChildByName(FileNode *dirNode, const char *searchName) {
     return NULL;
 }
 
-/* Insert child at end of circular list */
 static void insertChild(FileNode *dirNode, FileNode *childNode) {
     if (!dirNode->firstChild) {
         dirNode->firstChild = childNode;
@@ -142,12 +120,10 @@ static void insertChild(FileNode *dirNode, FileNode *childNode) {
     childNode->parentDir = dirNode;
 }
 
-/* Remove child from circular list (but do not free) */
 static void detachChild(FileNode *dirNode, FileNode *childNode) {
     if (!dirNode || !dirNode->firstChild || !childNode) return;
     FileNode *childHead = dirNode->firstChild;
     if (childNode->nextSibling == childNode) {
-        /* only node */
         dirNode->firstChild = NULL;
     } else {
         if (dirNode->firstChild == childNode) dirNode->firstChild = childNode->nextSibling;
@@ -158,8 +134,6 @@ static void detachChild(FileNode *dirNode, FileNode *childNode) {
     childNode->parentDir = NULL;
 }
 
-/* -------------------- Block allocation/free helpers for files -------------------- */
-/* Allocate n blocks; return array of indices (malloced) or NULL on failure */
 static int *allocateBlocks(int numberOfBlocks) {
     if (numberOfBlocks <= 0) return NULL;
     if (freeBlockCount < numberOfBlocks) return NULL;
@@ -168,7 +142,6 @@ static int *allocateBlocks(int numberOfBlocks) {
     for (int blockCounter = 0; blockCounter < numberOfBlocks; ++blockCounter) {
         int allocatedIndex = allocateBlockFromHead();
         if (allocatedIndex < 0) {
-            /* should not happen because we checked freeBlockCount */
             free(allocatedBlocks);
             return NULL;
         }
@@ -177,12 +150,10 @@ static int *allocateBlocks(int numberOfBlocks) {
     return allocatedBlocks;
 }
 
-/* Free an array of blocks by appending each to tail (order preserved) */
 static void freeBlocksAppendTail(int *blocks, int count) {
     if (!blocks || count <= 0) return;
     for (int blockCounter = 0; blockCounter < count; ++blockCounter) {
         int freedBlockIndex = blocks[blockCounter];
-        /* optional: clear disk content */
         unsigned char *blockAddress = virtualDisk + ((size_t)freedBlockIndex * BLOCK_SIZE);
         memset(blockAddress, 0, BLOCK_SIZE);
         appendFreeBlockTail(freedBlockIndex);
@@ -190,7 +161,6 @@ static void freeBlocksAppendTail(int *blocks, int count) {
     free(blocks);
 }
 
-/* -------------------- File/Directory operations -------------------- */
 static void commandMkdir(const char *dirName) {
     if (!dirName || strlen(dirName) == 0) { printf("Invalid name.\n"); return; }
     if (strlen(dirName) > MAX_NAME_LEN) { printf("Name too long (max %d).\n", MAX_NAME_LEN); return; }
@@ -225,23 +195,20 @@ static void commandLs() {
 
 static void printPwdRecursive(FileNode *walkNode) {
     if (!walkNode) return;
-    if (walkNode->parentDir == NULL) { /* root */
+    if (walkNode->parentDir == NULL) {
         printf("/");
         return;
     }
     printPwdRecursive(walkNode->parentDir);
-    if (walkNode->parentDir->parentDir != NULL) printf("%s/", walkNode->entryName); /* if parent not root, show parent path? */
+    if (walkNode->parentDir->parentDir != NULL) printf("%s/", walkNode->entryName);
 }
 
-/* Simplified pwd: build path by walking parents */
 static void commandPwd() {
-    /* Build stack of names */
     FileNode *cwdNode = currentDirectory;
-    if (cwdNode->parentDir == NULL) { /* root */
+    if (cwdNode->parentDir == NULL) {
         printf("/\n");
         return;
     }
-    /* Count depth */
     int pathDepth = 0;
     FileNode *walker = cwdNode;
     while (walker && walker->parentDir) { pathDepth++; walker = walker->parentDir; }
@@ -261,7 +228,6 @@ static void commandPwd() {
     free(pathParts);
 }
 
-/* cd command: supports .. and / and single-name child */
 static void commandCd(const char *argName) {
     if (!argName || strlen(argName) == 0) { printf("Usage: cd <dir>\n"); return; }
     if (strcmp(argName, "/") == 0) {
@@ -293,7 +259,6 @@ static void commandCd(const char *argName) {
     commandPwd();
 }
 
-/* create file (empty) */
 static void commandCreate(const char *fileName) {
     if (!fileName || strlen(fileName) == 0) { printf("Invalid name.\n"); return; }
     if (strlen(fileName) > MAX_NAME_LEN) { printf("Name too long (max %d).\n", MAX_NAME_LEN); return; }
@@ -315,53 +280,41 @@ static void commandCreate(const char *fileName) {
     printf("File '%s' created successfully.\n", fileName);
 }
 
-/* Helper to compute ceil division for blocks */
 static int blocksNeededForSize(long sizeBytes) {
     if (sizeBytes <= 0) return 0;
     return (int)((sizeBytes + BLOCK_SIZE - 1) / BLOCK_SIZE);
 }
 
-/* Write (append) data to a file. content string is raw bytes; will append to existing file */
 static void commandWrite(const char *fileName, const char *content) {
     if (!fileName || !content) { printf("Usage: write <file> \"content\"\n"); return; }
     FileNode *node = findChildByName(currentDirectory, fileName);
     if (!node) { printf("File not found.\n"); return; }
     if (node->isDirectory) { printf("Target is a directory.\n"); return; }
-
-    long newDataLen = (long)strlen(content); /* treat as bytes (no special escapes) */
+    long newDataLen = (long)strlen(content);
     long newTotalSize = node->fileSizeBytes + newDataLen;
     int newTotalBlocks = blocksNeededForSize(newTotalSize);
     int existingBlocks = node->blocksAllocated;
     int additionalBlocksNeeded = newTotalBlocks - existingBlocks;
-
     if (additionalBlocksNeeded > 0) {
-        /* allocate additional blocks */
         if (freeBlockCount < additionalBlocksNeeded) {
             printf("Disk full. Cannot write file.\n");
             return;
         }
         int *newBlocks = allocateBlocks(additionalBlocksNeeded);
         if (!newBlocks) { printf("Allocation failed.\n"); return; }
-        /* expand node->allocatedBlockArray array */
         int *combinedBlocks = malloc(sizeof(int) * newTotalBlocks);
         if (!combinedBlocks) { perror("malloc"); exit(EXIT_FAILURE); }
-        /* copy existing */
         for (int copyIndex = 0; copyIndex < existingBlocks; ++copyIndex) combinedBlocks[copyIndex] = node->allocatedBlockArray[copyIndex];
-        /* append new blocks */
         for (int appendIndex = 0; appendIndex < additionalBlocksNeeded; ++appendIndex) combinedBlocks[existingBlocks + appendIndex] = newBlocks[appendIndex];
         free(newBlocks);
         free(node->allocatedBlockArray);
         node->allocatedBlockArray = combinedBlocks;
         node->blocksAllocated = newTotalBlocks;
     } else if (newTotalBlocks == 0 && node->blocksAllocated > 0) {
-        /* writing zero bytes? nothing to do */
     }
-
-    /* Write content bytes into blocks, respecting existing content length (append) */
-    long offsetInFile = node->fileSizeBytes; /* where to start appending */
+    long offsetInFile = node->fileSizeBytes;
     long remainingToWrite = newDataLen;
     const unsigned char *srcPtr = (const unsigned char *)content;
-
     while (remainingToWrite > 0) {
         int blockIndexInFile = (int)(offsetInFile / BLOCK_SIZE);
         int offsetInBlock = (int)(offsetInFile % BLOCK_SIZE);
@@ -374,19 +327,16 @@ static void commandWrite(const char *fileName, const char *content) {
         remainingToWrite -= canWrite;
         offsetInFile += canWrite;
     }
-
     node->fileSizeBytes = newTotalSize;
     printf("Data written successfully (size=%ld bytes).\n", newDataLen);
 }
 
-/* Read file and print its contents (exact fileSizeBytes) */
 static void commandRead(const char *fileName) {
     if (!fileName) { printf("Usage: read <file>\n"); return; }
     FileNode *node = findChildByName(currentDirectory, fileName);
     if (!node) { printf("File not found.\n"); return; }
     if (node->isDirectory) { printf("Target is a directory.\n"); return; }
     if (node->fileSizeBytes == 0) { printf("(empty)\n"); return; }
-
     long remaining = node->fileSizeBytes;
     long offset = 0;
     while (remaining > 0) {
@@ -396,7 +346,6 @@ static void commandRead(const char *fileName) {
         unsigned char *srcPtr = virtualDisk + ((size_t)diskBlockIndex * BLOCK_SIZE) + offsetInBlock;
         int canRead = (int)(BLOCK_SIZE - offsetInBlock);
         if (canRead > remaining) canRead = (int)remaining;
-        /* print chunk */
         fwrite(srcPtr, 1, canRead, stdout);
         remaining -= canRead;
         offset += canRead;
@@ -404,15 +353,12 @@ static void commandRead(const char *fileName) {
     printf("\n");
 }
 
-/* Delete file: remove node from directory and return blocks to free list tail */
 static void commandDelete(const char *fileName) {
     if (!fileName) { printf("Usage: delete <file>\n"); return; }
     FileNode *node = findChildByName(currentDirectory, fileName);
     if (!node) { printf("File not found.\n"); return; }
     if (node->isDirectory) { printf("Target is a directory.\n"); return; }
-    /* detach from parent's children */
     detachChild(currentDirectory, node);
-    /* free blocks */
     if (node->allocatedBlockArray && node->blocksAllocated > 0) {
         freeBlocksAppendTail(node->allocatedBlockArray, node->blocksAllocated);
         node->allocatedBlockArray = NULL;
@@ -423,7 +369,6 @@ static void commandDelete(const char *fileName) {
     printf("File deleted successfully.\n");
 }
 
-/* rmdir: remove empty directory only */
 static void commandRmdir(const char *dirName) {
     if (!dirName) { printf("Usage: rmdir <dir>\n"); return; }
     FileNode *node = findChildByName(currentDirectory, dirName);
@@ -435,7 +380,6 @@ static void commandRmdir(const char *dirName) {
     printf("Directory removed successfully.\n");
 }
 
-/* df: print disk usage */
 static void commandDf() {
     int used = totalBlocks - freeBlockCount;
     double usagePercent = (totalBlocks == 0) ? 0.0 : ((double)used * 100.0 / (double)totalBlocks);
@@ -445,10 +389,8 @@ static void commandDf() {
     printf("Disk Usage: %.2f%%\n", usagePercent);
 }
 
-/* Cleanup: free all nodes recursively */
 static void freeDirectoryRecursive(FileNode *dirNode) {
     if (!dirNode) return;
-    /* free children */
     FileNode *child = dirNode->firstChild;
     if (child) {
         FileNode *childHead = child;
@@ -457,7 +399,6 @@ static void freeDirectoryRecursive(FileNode *dirNode) {
             FileNode *nextChild = iterator->nextSibling;
             if (iterator->isDirectory) freeDirectoryRecursive(iterator);
             else {
-                /* free file blocks */
                 if (iterator->allocatedBlockArray && iterator->blocksAllocated > 0) {
                     freeBlocksAppendTail(iterator->allocatedBlockArray, iterator->blocksAllocated);
                     iterator->allocatedBlockArray = NULL;
@@ -467,13 +408,10 @@ static void freeDirectoryRecursive(FileNode *dirNode) {
             iterator = nextChild;
         } while (iterator != childHead);
     }
-    /* free this directory node (except root might be freed outside) */
     free(dirNode);
 }
 
-/* Free entire FS resources gracefully */
 static void cleanupFileSystem() {
-    /* Free children of root */
     FileNode *head = rootDirectory->firstChild;
     if (head) {
         FileNode *iterator = head;
@@ -489,11 +427,8 @@ static void cleanupFileSystem() {
             iterator = nextChild;
         } while (iterator != head);
     }
-    /* free root */
     free(rootDirectory);
     rootDirectory = currentDirectory = NULL;
-
-    /* free any free list nodes */
     FreeBlock *freeIterator = freeListHead;
     while (freeIterator) {
         FreeBlock *nextFree = freeIterator->nextFree;
@@ -502,33 +437,24 @@ static void cleanupFileSystem() {
     }
     freeListHead = freeListTail = NULL;
     freeBlockCount = 0;
-
-    /* free virtual disk */
     free(virtualDisk);
     virtualDisk = NULL;
 }
 
-/* -------------------- Input parsing helpers -------------------- */
-/* Trim leading/trailing spaces */
 static void trimWhitespace(char *str) {
     if (!str) return;
-    /* left */
     char *p = str;
     while (isspace((unsigned char)*p)) p++;
     if (p != str) memmove(str, p, strlen(p) + 1);
-    /* right */
     size_t strLen = strlen(str);
     while (strLen > 0 && isspace((unsigned char)str[strLen - 1])) str[--strLen] = '\0';
 }
 
-/* Parse a command line; handle quoted content for write command */
 static void processCommandLine(char *line) {
     trimWhitespace(line);
     if (strlen(line) == 0) return;
-    /* tokenization: get first token (command) */
     char *cmd = strtok(line, " ");
     if (!cmd) return;
-
     if (strcmp(cmd, "mkdir") == 0) {
         char *dirName = strtok(NULL, " ");
         if (!dirName) { printf("Usage: mkdir <name>\n"); return; }
@@ -546,16 +472,14 @@ static void processCommandLine(char *line) {
         if (!fileName) { printf("Usage: create <name>\n"); return; }
         commandCreate(fileName);
     } else if (strcmp(cmd, "write") == 0) {
-        /* expecting: write filename "content possibly with spaces" */
         char *fileName = strtok(NULL, " ");
         if (!fileName) { printf("Usage: write <file> \"content\"\n"); return; }
-        char *restOfLine = strtok(NULL, ""); /* get rest of string including quotes if any */
+        char *restOfLine = strtok(NULL, "");
         if (!restOfLine) { printf("Usage: write <file> \"content\"\n"); return; }
         trimWhitespace(restOfLine);
         char *contentStart = restOfLine;
         if (*contentStart == '"') {
             contentStart++;
-            /* find closing quote */
             char *closingQuote = strrchr(contentStart, '"');
             if (closingQuote) *closingQuote = '\0';
         }
@@ -583,7 +507,6 @@ static void processCommandLine(char *line) {
     }
 }
 
-/* -------------------- REPL -------------------- */
 int main(int argc, char *argv[]) {
     int numBlocks = DEFAULT_NUM_BLOCKS;
     if (argc >= 2) {
@@ -597,21 +520,17 @@ int main(int argc, char *argv[]) {
     printf("Compact VFS - ready. Type 'exit' to quit.\n");
     char inputLine[4096];
     while (1) {
-        /* Print prompt as current path */
         if (currentDirectory == rootDirectory) printf("/ > ");
         else {
-            /* print last component of path */
             printf("%s > ", currentDirectory->entryName);
         }
         if (!fgets(inputLine, sizeof(inputLine), stdin)) {
             printf("\n");
             continue;
         }
-        /* remove newline */
         size_t lineLen = strlen(inputLine);
         if (lineLen > 0 && inputLine[lineLen-1] == '\n') inputLine[lineLen-1] = '\0';
         processCommandLine(inputLine);
     }
-
     return 0;
 }
