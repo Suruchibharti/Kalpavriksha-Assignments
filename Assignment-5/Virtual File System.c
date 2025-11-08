@@ -34,15 +34,6 @@ static FreeBlock *freeListTail = NULL;
 static FileNode *rootDirectory = NULL;
 static FileNode *currentDirectory = NULL;
 
-static char *strDupSafe(const char *inputString) {
-    if (!inputString) return NULL;
-    size_t inputLength = strlen(inputString) + 1;
-    char *duplicateString = malloc(inputLength);
-    if (!duplicateString) { perror("malloc"); exit(EXIT_FAILURE); }
-    memcpy(duplicateString, inputString, inputLength);
-    return duplicateString;
-}
-
 static void appendFreeBlockTail(int blockIndex) {
     FreeBlock *newFreeBlock = malloc(sizeof(FreeBlock));
     if (!newFreeBlock) { perror("malloc"); exit(EXIT_FAILURE); }
@@ -191,16 +182,6 @@ static void commandLs() {
         else printf("%s\n", childIterator->entryName);
         childIterator = childIterator->nextSibling;
     } while (childIterator != childHead);
-}
-
-static void printPwdRecursive(FileNode *walkNode) {
-    if (!walkNode) return;
-    if (walkNode->parentDir == NULL) {
-        printf("/");
-        return;
-    }
-    printPwdRecursive(walkNode->parentDir);
-    if (walkNode->parentDir->parentDir != NULL) printf("%s/", walkNode->entryName);
 }
 
 static void commandPwd() {
