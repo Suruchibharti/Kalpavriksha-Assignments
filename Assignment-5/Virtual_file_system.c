@@ -384,6 +384,34 @@ void showDiskUsage() {
            totalBlockCount, usedBlockCount, freeBlocks, usedPercentage);
 }
 
+void freeFileNodes(FileNode *node) {
+    if (!node) return;
+    if (node->childEntry) {
+        FileNode *child = node->childEntry;
+        do {
+            FileNode *nextChild = child->nextEntry;
+            freeFileNodes(child);
+            child = (nextChild == node->childEntry) ? NULL : nextChild;
+        } while (child);
+    }
+    free(node);
+}
+
+void freeFileSystem() {
+    FreeBlock *block = freeBlockHead;
+    while (block) {
+        FreeBlock *next = block->nextBlock;
+        free(block);
+        block = next;
+    }
+
+    for (int i = 0; i < totalBlockCount; i++)
+        free(virtualDisk[i]);
+
+    free(virtualDisk);
+    freeFileNodes(rootDirectory);
+}
+
 void processCommandLine(char *inputCommand) {
     char *command = strtok(inputCommand, " ");
     char *argument1 = strtok(NULL, " ");
@@ -412,7 +440,9 @@ void processCommandLine(char *inputCommand) {
     else if (strcmp(command, "df") == 0)
         showDiskUsage();
     else if (strcmp(command, "exit") == 0) {
-        printf("Memory released. Exiting program...\n");
+        printf("Releasing memory...\n");
+        freeFileSystem();
+        printf("Memory released. Exiting program.\n");
         exit(0);
     } else {
         printf("Invalid command or missing argument.\n");
