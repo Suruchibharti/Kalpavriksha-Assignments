@@ -55,7 +55,9 @@ void initializeFileSystem(int blockCount) {
     }
 
     rootDirectory = malloc(sizeof(FileNode));
-    strcpy(rootDirectory->entryName, "/");
+    /* ensure safe copy for root name */
+    strncpy(rootDirectory->entryName, "/", MAX_NAME_LENGTH - 1);
+    rootDirectory->entryName[MAX_NAME_LENGTH - 1] = '\0';
     rootDirectory->isDirectory = 1;
     rootDirectory->nextEntry = NULL;
     rootDirectory->previousEntry = NULL;
@@ -65,6 +67,15 @@ void initializeFileSystem(int blockCount) {
 }
 
 void makeDirectory(const char *directoryName) {
+    if (!directoryName) {
+        printf("Invalid name.\n");
+        return;
+    }
+    if (strlen(directoryName) >= MAX_NAME_LENGTH) {
+        printf("Error: Name too long (max %d characters).\n", MAX_NAME_LENGTH - 1);
+        return;
+    }
+
     FileNode *iterator = currentDirectory->childEntry;
 
     if (iterator) {
@@ -78,7 +89,8 @@ void makeDirectory(const char *directoryName) {
     }
 
     FileNode *newDirectory = malloc(sizeof(FileNode));
-    strcpy(newDirectory->entryName, directoryName);
+    strncpy(newDirectory->entryName, directoryName, MAX_NAME_LENGTH - 1);
+    newDirectory->entryName[MAX_NAME_LENGTH - 1] = '\0';
     newDirectory->isDirectory = 1;
     newDirectory->nextEntry = NULL;
     newDirectory->previousEntry = NULL;
@@ -101,6 +113,15 @@ void makeDirectory(const char *directoryName) {
 }
 
 void createFile(const char *fileName) {
+    if (!fileName) {
+        printf("Invalid name.\n");
+        return;
+    }
+    if (strlen(fileName) >= MAX_NAME_LENGTH) {
+        printf("Error: Name too long (max %d characters).\n", MAX_NAME_LENGTH - 1);
+        return;
+    }
+
     FileNode *iterator = currentDirectory->childEntry;
 
     if (iterator) {
@@ -114,7 +135,8 @@ void createFile(const char *fileName) {
     }
 
     FileNode *newFile = malloc(sizeof(FileNode));
-    strcpy(newFile->entryName, fileName);
+    strncpy(newFile->entryName, fileName, MAX_NAME_LENGTH - 1);
+    newFile->entryName[MAX_NAME_LENGTH - 1] = '\0';
     newFile->isDirectory = 0;
     newFile->nextEntry = NULL;
     newFile->previousEntry = NULL;
@@ -122,6 +144,7 @@ void createFile(const char *fileName) {
     newFile->childEntry = NULL;
     newFile->fileSize = 0;
     newFile->allocatedBlocksCount = 0;
+    for (int i = 0; i < MAX_BLOCK_POINTERS; ++i) newFile->blockPointers[i] = -1;
 
     if (!currentDirectory->childEntry) {
         currentDirectory->childEntry = newFile;
@@ -159,7 +182,7 @@ void writeFile(const char *fileName, const char *fileData) {
         return;
     }
 
-    int dataLength = strlen(fileData);
+    int dataLength = (int)strlen(fileData);
     int requiredBlocks = (dataLength + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
     if (requiredBlocks > MAX_BLOCK_POINTERS) {
@@ -197,7 +220,7 @@ void writeFile(const char *fileName, const char *fileData) {
         usedBlockCount++;
     }
 
-    iterator->fileSize = strlen(fileData);
+    iterator->fileSize = (int)strlen(fileData);
     printf("Data written successfully (size=%d bytes).\n", iterator->fileSize);
 }
 
