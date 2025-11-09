@@ -55,7 +55,6 @@ void initializeFileSystem(int blockCount) {
     }
 
     rootDirectory = malloc(sizeof(FileNode));
-    /* ensure safe copy for root name */
     strncpy(rootDirectory->entryName, "/", MAX_NAME_LENGTH - 1);
     rootDirectory->entryName[MAX_NAME_LENGTH - 1] = '\0';
     rootDirectory->isDirectory = 1;
@@ -446,8 +445,14 @@ void processCommandLine(char *inputCommand) {
         makeDirectory(argument1);
     else if (strcmp(command, "create") == 0 && argument1)
         createFile(argument1);
-    else if (strcmp(command, "write") == 0 && argument1 && argument2)
-        writeFile(argument1, argument2 + 1);
+    else if (strcmp(command, "write") == 0 && argument1 && argument2) {
+        char *data = argument2;
+        if (data[0] == '"' && data[strlen(data) - 1] == '"') {
+            data[strlen(data) - 1] = '\0';
+            data++;
+        }
+        writeFile(argument1, data);
+    }
     else if (strcmp(command, "read") == 0 && argument1)
         readFile(argument1);
     else if (strcmp(command, "delete") == 0 && argument1)
