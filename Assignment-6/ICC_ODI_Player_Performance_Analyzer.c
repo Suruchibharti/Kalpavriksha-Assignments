@@ -17,7 +17,8 @@ typedef struct PlayerNode {
     int wickets;
     float economyRate;
     double performanceIndex;
-    struct PlayerNode* nextPlayer;
+    struct PlayerNode* nextPlayer; /* general chain (per team) */
+    struct PlayerNode* nextRole;   /* role-specific chain (per team) */
 } PlayerNode;
 
 typedef struct TeamNode {
@@ -70,6 +71,7 @@ PlayerNode* createPlayerNodeFromData(int playerId, const char* playerName, const
     node->economyRate = economyRate;
     node->performanceIndex = computePerformanceIndex(role, battingAverage, strikeRate, wickets, economyRate);
     node->nextPlayer = NULL;
+    node->nextRole = NULL;
     return node;
 }
 
@@ -108,15 +110,9 @@ TeamNode* initializeTeamsFromHeader() {
     return teamsArray;
 }
 
-TeamNode* getTeamByIdBinary(TeamNode* teamsArray, TeamNode** teamsSortedById, int tcount, int teamId) {
-    int lo = 0, hi = tcount - 1;
-    while (lo <= hi) {
-        int mid = lo + (hi - lo) / 2;
-        if (teamsSortedById[mid]->teamId == teamId) return teamsSortedById[mid];
-        if (teamsSortedById[mid]->teamId < teamId) lo = mid + 1;
-        else hi = mid - 1;
-    }
-    return NULL;
+TeamNode* getTeamById(TeamNode* teamsArray, TeamNode** teamsSortedById, int tcount, int teamId) {
+    if (teamId < 1 || teamId > tcount) return NULL;
+    return &teamsArray[teamId - 1];
 }
 
 void buildPerRoleSortedLists(TeamNode* teamsArray) {
@@ -126,6 +122,7 @@ void buildPerRoleSortedLists(TeamNode* teamsArray) {
         PlayerNode* bowlsArr[256]; int wi = 0;
         PlayerNode* allsArr[256]; int ai = 0;
         while (it) {
+            it->nextRole = NULL;
             if (it->role == ROLE_BATSMAN && bi < 256) batsArr[bi++] = it;
             else if (it->role == ROLE_BOWLER && wi < 256) bowlsArr[wi++] = it;
             else if (it->role == ROLE_ALLROUNDER && ai < 256) allsArr[ai++] = it;
@@ -139,22 +136,22 @@ void buildPerRoleSortedLists(TeamNode* teamsArray) {
         if (bi > 0) {
             teamsArray[ti].batsmanHead = batsArr[0];
             PlayerNode* cur = teamsArray[ti].batsmanHead;
-            for (int i = 1; i < bi; ++i) { cur->nextPlayer = batsArr[i]; cur = cur->nextPlayer; }
-            cur->nextPlayer = NULL;
+            for (int i = 1; i < bi; ++i) { cur->nextRole = batsArr[i]; cur = cur->nextRole; }
+            cur->nextRole = NULL;
         }
         teamsArray[ti].bowlerHead = NULL;
         if (wi > 0) {
             teamsArray[ti].bowlerHead = bowlsArr[0];
             PlayerNode* cur = teamsArray[ti].bowlerHead;
-            for (int i = 1; i < wi; ++i) { cur->nextPlayer = bowlsArr[i]; cur = cur->nextPlayer; }
-            cur->nextPlayer = NULL;
+            for (int i = 1; i < wi; ++i) { cur->nextRole = bowlsArr[i]; cur = cur->nextRole; }
+            cur->nextRole = NULL;
         }
         teamsArray[ti].allrounderHead = NULL;
         if (ai > 0) {
             teamsArray[ti].allrounderHead = allsArr[0];
             PlayerNode* cur = teamsArray[ti].allrounderHead;
-            for (int i = 1; i < ai; ++i) { cur->nextPlayer = allsArr[i]; cur = cur->nextPlayer; }
-            cur->nextPlayer = NULL;
+            for (int i = 1; i < ai; ++i) { cur->nextRole = allsArr[i]; cur = cur->nextRole; }
+            cur->nextRole = NULL;
         }
     }
 }
@@ -201,7 +198,7 @@ void displayTopKPlayersOfTeamByRole(TeamNode* team, RoleEnum role, int K) {
         printf("%d\t%-16s\t%-11s\t%d\t%.2f\t%.2f\t%d\t%.2f\t%.2f\n",
                it->playerId, it->playerName, roleEnumToString(it->role),
                it->totalRuns, it->battingAverage, it->strikeRate, it->wickets, it->economyRate, it->performanceIndex);
-        it = it->nextPlayer; ++cnt;
+        it = it->nextRole; ++cnt;
     }
 }
 
@@ -254,30 +251,31 @@ void displayAllPlayersByRoleAcrossTeams(TeamNode* teamsArray, RoleEnum role) {
         printf("%d\t%-16s\t%-12s\t%-11s\t%d\t%.2f\t%.2f\t%d\t%.2f\t%.2f\n",
                p->playerId, p->playerName, p->teamName, roleEnumToString(p->role),
                p->totalRuns, p->battingAverage, p->strikeRate, p->wickets, p->economyRate, p->performanceIndex);
-        PlayerNode* next = p->nextPlayer;
+        PlayerNode* next = p->nextRole;
         if (next) { HeapNode hn = { .node = next, .teamIndex = top.teamIndex }; heapPush(heap, &heapSize, hn); }
     }
 }
 
 void insertIntoRoleListSorted(PlayerNode** headRef, PlayerNode* node) {
     if (!headRef || !node) return;
+    node->nextRole = NULL;
     if (!(*headRef) || node->performanceIndex > (*headRef)->performanceIndex) {
-        node->nextPlayer = *headRef; *headRef = node; return;
+        node->nextRole = *headRef; *headRef = node; return;
     }
     PlayerNode* it = *headRef;
-    while (it->nextPlayer && it->nextPlayer->performanceIndex >= node->performanceIndex) it = it->nextPlayer;
-    node->nextPlayer = it->nextPlayer; it->nextPlayer = node;
+    while (it->nextRole && it->nextRole->performanceIndex >= node->performanceIndex) it = it->nextRole;
+    node->nextRole = it->nextRole; it->nextRole = node;
 }
 
 int addPlayerInteractive(TeamNode* teamsArray, TeamNode** teamsSortedById, int* idValid) {
     char buffer[256], nameBuf[128]; int teamId, playerId, roleSel, totalRuns; float battingAverage, strikeRate, economyRate; int wickets; char extra;
     while (1) {
-        printf("Enter Team ID to add player (1-10):");
+        printf("Enter Team ID to add player (1-%d): ", teamCount);
         if (!fgets(buffer, sizeof(buffer), stdin)) return -1;
-        if (sscanf(buffer, "%d %c", &teamId, &extra) == 1 && teamId >= 1 && teamId <= 10)break;
-        fprintf(stderr, "Please enter a valid Team ID (1-1000)\n");
+        if (sscanf(buffer, "%d %c", &teamId, &extra) == 1 && teamId >= 1 && teamId <= teamCount) break;
+        fprintf(stderr, "Please enter a valid Team ID (1-%d)\n", teamCount);
     }
-    TeamNode* targetTeam = getTeamByIdBinary(teamsArray, teamsSortedById, teamCount, teamId);
+    TeamNode* targetTeam = getTeamById(teamsArray, teamsSortedById, teamCount, teamId);
     if (!targetTeam) { fprintf(stderr, "Invalid team selected\n"); return -1; }
 
     while (1) {
@@ -339,7 +337,7 @@ int addPlayerInteractive(TeamNode* teamsArray, TeamNode** teamsSortedById, int* 
     PlayerNode* newNode = createPlayerNodeFromData(playerId, nameBuf, targetTeam->teamName, chosenRole, totalRuns, battingAverage, strikeRate, wickets, economyRate);
 
     appendPlayerToTeamList(targetTeam, newNode);
-   
+
     if (chosenRole == ROLE_BATSMAN) insertIntoRoleListSorted(&targetTeam->batsmanHead, newNode);
     else if (chosenRole == ROLE_BOWLER) insertIntoRoleListSorted(&targetTeam->bowlerHead, newNode);
     else insertIntoRoleListSorted(&targetTeam->allrounderHead, newNode);
@@ -377,7 +375,7 @@ int main(void) {
     TeamNode** teamsSortedById = (TeamNode**)malloc(sizeof(TeamNode*) * teamCount);
     if (!teamsSortedById) { perror("malloc"); exit(EXIT_FAILURE); }
     for (int i = 0; i < teamCount; ++i) teamsSortedById[i] = &teamsArray[i];
-   
+
     for (int i = 0; i < teamCount - 1; ++i) for (int j = i + 1; j < teamCount; ++j)
         if (teamsSortedById[i]->teamId > teamsSortedById[j]->teamId) { TeamNode* t = teamsSortedById[i]; teamsSortedById[i] = teamsSortedById[j]; teamsSortedById[j] = t; }
 
@@ -385,7 +383,6 @@ int main(void) {
         const Player* p = &players[i];
         RoleEnum r = roleStringToEnum(p->role ? p->role : "");
         PlayerNode* node = createPlayerNodeFromData(p->id, p->name, p->team, r, p->totalRuns, p->battingAverage, p->strikeRate, p->wickets, p->economyRate);
-       
         int found = -1;
         for (int t = 0; t < teamCount; ++t) if (strcmp(teamsArray[t].teamName, p->team) == 0) { found = t; break; }
         if (found >= 0) appendPlayerToTeamList(&teamsArray[found], node);
@@ -415,8 +412,8 @@ int main(void) {
 
         if (choice == 1) { addPlayerInteractive(teamsArray, teamsSortedById, idValid); }
         else if (choice == 2) {
-            int teamId = getIntegerInputValidatedSimple("Enter Team ID: ", 1, 1000);
-            TeamNode* t = getTeamByIdBinary(teamsArray, teamsSortedById, teamCount, teamId);
+            int teamId = getIntegerInputValidatedSimple("Enter Team ID: ", 1, teamCount);
+            TeamNode* t = getTeamById(teamsArray, teamsSortedById, teamCount, teamId);
             if (!t) { printf("Team not found\n"); continue; }
             computeTeamAverageStrikeRates(teamsArray);
             printTeamPlayers(t);
@@ -436,8 +433,8 @@ int main(void) {
             printf("=========================================================\n");
         }
         else if (choice == 4) {
-            int teamId = getIntegerInputValidatedSimple("Enter Team ID: ", 1, 1000);
-            TeamNode* t = getTeamByIdBinary(teamsArray, teamsSortedById, teamCount, teamId);
+            int teamId = getIntegerInputValidatedSimple("Enter Team ID: ", 1, teamCount);
+            TeamNode* t = getTeamById(teamsArray, teamsSortedById, teamCount, teamId);
             if (!t) { printf("Team not found\n"); continue; }
             int roleSel = getIntegerInputValidatedSimple("Enter Role (1-Batsman,2-Bowler,3-All-rounder): ", 1, 3);
             int kVal = getIntegerInputValidatedSimple("Enter number of players (K): ", 1, 1000);
