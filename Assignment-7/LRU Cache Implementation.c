@@ -45,6 +45,10 @@ HashNode* findHashNode(LRUCache* cache, int key) {
 void insertHashNode(LRUCache* cache, int key, DoublyNode* listNode) {
     int index = getHashIndex(key);
     HashNode* newNode = malloc(sizeof(HashNode));
+    if (!newNode) {
+        printf("Memory allocation failed\n");
+        exit(1);
+    }
     newNode->key = key;
     newNode->listNode = listNode;
     newNode->next = cache->hashTable[index];
@@ -70,6 +74,10 @@ void deleteHashNode(LRUCache* cache, int key) {
 
 DoublyNode* createDoublyNode(int key, char* value) {
     DoublyNode* node = malloc(sizeof(DoublyNode));
+    if (!node) {
+        printf("Memory allocation failed\n");
+        exit(1);
+    }
     node->key = key;
     strcpy(node->value, value);
     node->prev = NULL;
@@ -122,6 +130,10 @@ void removeLeastUsed(LRUCache* cache) {
 
 LRUCache* createCache(int capacity) {
     LRUCache* cache = malloc(sizeof(LRUCache));
+    if (!cache) {
+        printf("Memory allocation failed\n");
+        exit(1);
+    }
     cache->capacity = capacity;
     cache->currentSize = 0;
     cache->head = NULL;
@@ -164,6 +176,29 @@ int isValidInteger(char* str) {
     return 1;
 }
 
+void freeCache(LRUCache* cache) {
+    if (!cache) return;
+
+    for (int i = 0; i < HASH_TABLE_SIZE; i++) {
+        HashNode* current = cache->hashTable[i];
+        while (current) {
+            HashNode* nextNode = current->next;
+            free(current);
+            current = nextNode;
+        }
+        cache->hashTable[i] = NULL;
+    }
+
+    DoublyNode* cur = cache->head;
+    while (cur) {
+        DoublyNode* next = cur->next;
+        free(cur);
+        cur = next;
+    }
+
+    free(cache);
+}
+
 int main() {
     LRUCache* cache = NULL;
     char command[20], value[MAX_VALUE_LENGTH], keyStr[20], capacityStr[20];
@@ -184,10 +219,13 @@ int main() {
         }
 
         printf("Command> ");
-        scanf("%s", command);
+        if (scanf("%19s", command) != 1) break;
 
         if (strcmp(command, "createCache") == 0) {
-            scanf("%s", capacityStr);
+            if (scanf("%19s", capacityStr) != 1) {
+                printf("Invalid capacity\n");
+                continue;
+            }
 
             if (!isValidInteger(capacityStr)) {
                 printf("Invalid capacity\n");
@@ -201,6 +239,11 @@ int main() {
                 continue;
             }
 
+            if (cache) {
+                freeCache(cache);
+                cache = NULL;
+            }
+
             cache = createCache(capacity);
             printf("Cache created\n");
         }
@@ -211,7 +254,10 @@ int main() {
                 continue;
             }
 
-            scanf("%s %s", keyStr, value);
+            if (scanf("%19s %99s", keyStr, value) != 2) {
+                printf("Invalid put input\n");
+                continue;
+            }
 
             if (!isValidInteger(keyStr)) {
                 printf("Invalid key\n");
@@ -229,7 +275,10 @@ int main() {
                 continue;
             }
 
-            scanf("%s", keyStr);
+            if (scanf("%19s", keyStr) != 1) {
+                printf("Invalid get input\n");
+                continue;
+            }
 
             if (!isValidInteger(keyStr)) {
                 printf("Invalid key\n");
@@ -244,6 +293,7 @@ int main() {
         }
 
         else if (strcmp(command, "exit") == 0) {
+            if (cache) freeCache(cache);
             break;
         }
 
